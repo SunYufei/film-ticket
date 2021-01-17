@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: install requirements
+      - name: Install requirements
         run: pip3 install requests lxml
-      - name: run code
+      - name: Run codes
         run: python3 run.py -u ${{ secrets.USERNAME }} -p ${{ secrets.PASSWORD }}

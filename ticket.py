@@ -38,7 +38,7 @@ class Ticket:
             })
             return r.json()['code'] == 0
         except Exception as e:
-            print(f'login: {e}')
+            print(f'[登录] {e}')
             return False
 
     def run(self) -> bool:
@@ -85,7 +85,7 @@ class Ticket:
 
     def _rest_tickets(self) -> Tuple[date, dict]:
         # return values
-        act_date = date(2020, 1, 1)
+        act_date = date(2021, 1, 1)
         links = defaultdict(dict)
         for cinema in ticket_types:
             for price in ticket_types[cinema]:

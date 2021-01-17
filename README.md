@@ -22,11 +22,13 @@ python3 run.py -u USERNAME -p PASSWORD
 3. Add secrets `USERNAME` and `PASSWORD`
 
 ## Changelog
-- 2020-08-31, Bug fix
-- 2020-08-24, Adapt to new site
-- 2020-08-21, Add documents
-- 2020-01-23, Bug fix
-- 2020-01-22, Version 3.0 with GitHub Actions
-- 2020-01-14, Bug fix
-- 2020-01-05, Version 2.0
-- 2019-11-22, Version 1.0 with Qt5 GUI
+
+- 2021/01/17, Version 3.1 with simplified codes
+- 2020/08/31, Bug fix
+- 2020/08/24, Adapt to new site
+- 2020/08/21, Add documents
+- 2020/01/23, Bug fix
+- 2020/01/22, Version 3.0 with GitHub Actions
+- 2020/01/14, Bug fix
+- 2020/01/05, Version 2.0
+- 2019/11/22, Version 1.0 with Qt5 GUI
