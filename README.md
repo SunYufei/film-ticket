@@ -1,33 +1,36 @@
-# Film Ticket
+# film-ticket
 
-A Python requests demo
+> A simple Python `requests` demo.
 
-## System Requirement
+> Due to the website revision, the original program cannot continue to use. The original code has been moved to the `v1` folder.
 
-- Python 3.5 to 3.7
-- Internet connection
+> The new version no longer supports GUI.
 
-## Installation
+## Usage
 
-### Clone the Source Code
+### 1 Install Requirements
+
+```shell script
+pip install requests beautifulsoup4 lxml
+```
+
+### 2 Clone this Repo
 
 ```shell script
 git clone --depth=1 https://github.com/SunYufei/film-ticket.git
 ```
 
-or Download zip file of this repo
+### 3 Run
 
-### Install Requirements
-
-```shell script
-pip install beautifulsoup4 requests pyqt5 lxml
-```
-
-or use `anaconda`
-
-### Run
+Please change `USERNAME` and `PASSWORD` to yours
 
 ```shell script
 cd film-ticket
-python main.py
+python auto-get.py -u USERNAME -p PASSWORD
+```
+
+You can delete all of your tickets by using
+
+```shell script
+python delete-all.py -u USERNAME -p PASSWORD
 ```
