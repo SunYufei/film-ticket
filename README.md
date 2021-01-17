@@ -1,36 +1,32 @@
 # film-ticket
 
-> A simple Python `requests` demo.
-
-> Due to the website revision, the original program cannot continue to use. The original code has been moved to the `v1` folder.
-
-> The new version no longer supports GUI.
+> A simple Python `requests` demo
 
 ## Usage
 
-### 1 Install Requirements
+### Local
+
+Note: replace `USERNAME` and `PASSWORD` to yours
 
 ```shell script
-pip install requests beautifulsoup4 lxml
-```
-
-### 2 Clone this Repo
-
-```shell script
+pip3 install requests lxml
 git clone --depth=1 https://github.com/SunYufei/film-ticket.git
-```
-
-### 3 Run
-
-Please change `USERNAME` and `PASSWORD` to yours
-
-```shell script
 cd film-ticket
-python auto-get.py -u USERNAME -p PASSWORD
+python3 run.py -u USERNAME -p PASSWORD
 ```
 
-You can delete all of your tickets by using
+### GitHub Actions
 
-```shell script
-python delete-all.py -u USERNAME -p PASSWORD
-```
+1. Clone this repo
+2. Enable GitHub Actions
+3. Add secrets `USERNAME` and `PASSWORD`
+
+## Changelog
+- 2020-08-31, Bug fix
+- 2020-08-24, Adapt to new site
+- 2020-08-21, Add documents
+- 2020-01-23, Bug fix
+- 2020-01-22, Version 3.0 with GitHub Actions
+- 2020-01-14, Bug fix
+- 2020-01-05, Version 2.0
+- 2019-11-22, Version 1.0 with Qt5 GUI
