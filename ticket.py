@@ -1,100 +1,69 @@
 import re
-from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-from typing import Tuple
+from typing import List, Tuple
 
 import requests
 from lxml import etree
 
-# links
-from utils import utc_now
-
-BASE = 'http://city.qingdaonews.com/qingdao/laoshanculture'
-INDEX = f'{BASE}/index'
-LOGIN = f'{BASE}/loginsub'
-ORDER = f'{BASE}/myorder'
-REMOVE = f'{BASE}/delorder'
-PURCHASE = f'{BASE}/getticket'
-
-# cinema table template
-ticket_types = {
-    '利群华艺国际影院金鼎广场店': (8,),
-    '中影国际影城大拇指广场店': (8,)
-}
+from utils import log
 
 
-class Ticket:
-    def __init__(self, username, password):
+@dataclass
+class TicketInfo:
+    price: int
+    link: str = ''
+    rest: bool = True
+    tid: List[str] = field(default=[])
+    need_purchase: bool = True
+
+
+class TicketTools:
+    def __init__(self, username: str, password: str):
+        # urls
+        self._base = 'http://city.qingdaonews.com/qingdao/laoshanculture'
+        self._index = f'{self._base}/index'
+        self._login = f'{self._base}/loginsub'
+        self._order = f'{self._base}/myorder'
+        self._remove = f'{self._base}/delorder'
+        self._purchase = f'{self._base}/getticket'
+
+        # my orders
+        self.my_orders = {
+            '利群华艺国际影院金鼎广场店': (TicketInfo(price=8),),
+            '中影国际影城大拇指广场店': (TicketInfo(price=8),)
+        }
+
+        # username, password
         self._username = username
         self._password = password
+
         # session
         self._session = requests.Session()
 
     def login(self) -> bool:
+        """
+        :return: login status
+        """
         try:
-            r = self._session.post(LOGIN, data={
+            r = self._session.post(self._login, data={
                 'IdNumber': self._username,
                 'PassWord': self._password
             })
             return r.json()['code'] == 0
         except Exception as e:
-            print(f'[登录] {e}')
+            log('登录', e)
             return False
 
-    def run(self) -> bool:
-        # get UTC-8 time
-        now = utc_now()
-        print(f'[当前时间]\t{now.date()}')
-
-        # rest tickets
-        act_date, links = self._rest_tickets()
-        print(f'[最新活动]\t{act_date}')
-
-        # get orders
-        orders = self._get_orders(act_date)
-        print(f'{"[我的订单]":24s}\t|', end='')
-        for cinema in ticket_types:
-            for price in ticket_types[cinema]:
-                print(f'{price:3d} ', end='|')
-            break
-        print()
-
-        for cinema in orders:
-            print(cinema)
-            print(f'{" ":24s}\t|', end='')
-            for price in orders[cinema]:
-                print(f'{len(orders[cinema][price]):3d} ', end='|')
-            print()
-
-        if now.hour >= 23:
-            # delete all at every 11pm
-            for cinema in orders:
-                for price in orders[cinema]:
-                    for tid in orders[cinema][price]:
-                        print(f'[删除]\t{cinema} {price} {self._remove(tid)}')
-            return False
-        else:
-            ret = False
-            for cinema in orders:
-                for price in orders[cinema]:
-                    if len(orders[cinema][price]) != 2:
-                        need_purchase = self._purchase(links[cinema][price])
-                        print(f'[抢票]\t{cinema} {price} {"抢票结束" if not need_purchase else "仍需抢票"}')
-                        ret = ret or need_purchase
-            return ret
-
-    def _rest_tickets(self) -> Tuple[date, dict]:
-        # return values
-        act_date = date(2021, 1, 1)
-        links = defaultdict(dict)
-        for cinema in ticket_types:
-            for price in ticket_types[cinema]:
-                links[cinema][price] = None
-
+    def rest_tickets(self) -> date:
+        """
+        update rest tickets
+        """
+        act_date = date(2020, 1, 1)
         try:
-            page, flag = 1, True
-            while flag:
-                r = requests.get(f'{INDEX}/page/{page}')
+            page, do = 1, True
+            while do:
+                r = requests.get(f'{self._index}/page/{page}')
                 html = etree.HTML(r.text)
                 for item in html.xpath('//div[@class="jianzheng_remai_case"]'):
                     a = item.xpath('.//a[@class="jianzheng_remai_case_title"]')[0]
@@ -105,42 +74,38 @@ class Ticket:
                         act = datetime.strptime(act, '%Y-%m-%d').date()
                         if act - act_date >= timedelta(0):
                             act_date = act
-                            if len(item.xpath('.//i')) != 0:
-                                links[cinema][price] = item.xpath('.//a[@class="jianzheng_remai_case_title"]/@href')[0]
-                            else:
-                                links[cinema][price] = None
+                            for info in self.my_orders[cinema]:
+                                if info.price == price:
+                                    info.link = item.xpath('.//a[@class="jianzheng_remai_case_title"]/@href')[0]
+                                    info.rest = len(item.xpath('.//i')) != 0
+                                    break
                         else:
-                            flag = False
+                            # wrong activity time, break
+                            do = False
+                # next page
                 page += 1
         finally:
-            return act_date, links
+            return act_date
 
-    @staticmethod
-    def _parse_title(title: str) -> Tuple[bool, str, int]:
-        if '元观影活动' in title:
-            start = title.index('(')
-            end = title.index(')')
-            cinema = title[start + 1:end]
-            start = title.index(']')
-            end = title.index('元')
-            price = int(title[start + 1:end])
-            return True, cinema, price
-        else:
-            return False, '', 0
+    def update_orders(self, act_date: date) -> None:
+        """
+        get orders, need login
+        :param act_date: activity date
+        """
+        # clear old data
+        for cinema in self.my_orders:
+            for info in self.my_orders[cinema]:
+                info.tid.clear()
+                info.need_purchase = True
 
-    def _get_orders(self, act_date: date) -> dict:
-        orders = defaultdict(dict)
-        for cinema in ticket_types:
-            for price in ticket_types[cinema]:
-                orders[cinema][price] = []
-
+        # update new data
         try:
-            page, flag = 1, True
-            while flag:
-                r = self._session.get(f'{ORDER}/page/{page}')
+            page, do = 1, True
+            while do:
+                r = self._session.get(f'{self._order}/page/{page}')
                 html = etree.HTML(r.text)
                 items = html.xpath('//div[@class="jianzheng_remai_case"]')
-                flag = len(items) > 0
+                do = len(items) > 0
                 for item in items:
                     is_film, cinema, price = self._parse_title(item.xpath('.//a/text()')[0])
                     # if order is about film ticket
@@ -151,24 +116,34 @@ class Ticket:
                         if time - act_date == timedelta(0):
                             button = item.xpath('.//input')
                             if len(button) == 1:
-                                orders[cinema][price].append(button[-1].xpath('@onclick')[0][5:-2])
+                                for info in self.my_orders[cinema]:
+                                    if info.price == price:
+                                        info.tid.append(button[-1].xpath('@onclick')[0][5:-2])
+                                        if len(info.tid) == 2:
+                                            info.need_purchase = False
+                                        break
                         else:
                             # wrong activity time, break
-                            flag = False
+                            do = False
                 # next page
                 page += 1
-        finally:
-            return orders
+        except Exception as e:
+            log('我的订单', e)
 
-    def _purchase(self, url: str) -> bool:
-        if not isinstance(url, str):
-            return True
-        data = {'activityid': '',
-                'activityname': '',
-                'idnumber': '',
-                'realname': '',
-                'type2': '',
-                'current_url': url}
+    def purchase(self, url: str) -> bool:
+        """
+        purchase, need login
+        :param url: purchase url
+        :return: need purchase
+        """
+        data = {
+            'activityid': '',
+            'activityname': '',
+            'idnumber': '',
+            'realname': '',
+            'type2': '',
+            'current_url': url
+        }
         try:
             r = self._session.get(url)
             html = etree.HTML(r.text)
@@ -176,21 +151,67 @@ class Ticket:
                 name = item.xpath('@name')[0]
                 if name in data:
                     data[name] = item.xpath('@value')[0]
-            while True:
-                r = self._session.post(PURCHASE, data)
-                if r.json()['message'] == '每人只能抢2票':
-                    break
-            return False
+            r = self._session.post(self._purchase, data)
+            return r.json()['message'] != '每人只能抢2票'
         except Exception as e:
-            print(e)
+            log('抢票', e)
             return True
 
-    def _remove(self, tid: str) -> object:
-        msg = {'1': '活动已过期', '2': '删除失败',
-               '3': '删除成功', '200': '服务器错误'}
+    def remove_all(self) -> None:
+        """
+        remove all tickets
+        """
+        msg = {
+            '1': '活动已过期',
+            '2': '删除失败',
+            '3': '删除成功',
+            '200': '服务器错误'
+        }
         try:
-            r = self._session.post(REMOVE, data={'QzId': tid})
-            code = r.text[1:-1]
-            return msg[code] if code in msg else code
+            for cinema in self.my_orders:
+                for info in self.my_orders[cinema]:
+                    for tid in info.tid:
+                        r = self._session.post(self._remove, data={'QzId': tid})
+                        code = r.text[1:-1]
+                        log('删除', f'{cinema} {info.price} {msg[code] if code in msg else code}')
         except Exception as e:
-            return e
+            log('删除', e)
+
+    def max_type_count(self) -> int:
+        count = 0
+        for cinema in self.my_orders:
+            count += len(self.my_orders[cinema])
+        return count
+
+    def show_orders(self) -> None:
+        print(f'{"[我的订单]":24s}\t|', end='')
+        for cinema in self.my_orders:
+            for info in self.my_orders[cinema]:
+                print(f'{info.price:3d} ', end='|')
+            break
+        print()
+
+        for cinema in self.my_orders:
+            print(cinema)
+            print(f'{" ":24s}\t|', end='')
+            for info in self.my_orders[cinema]:
+                print(f'{len(info.tid):3d} ', end='|')
+            print()
+
+    @staticmethod
+    def _parse_title(title: str) -> Tuple[bool, str, int]:
+        """
+        parse and check title
+        :param title: title str
+        :return: is_film, cinema, price
+        """
+        if '元观影活动' in title:
+            start = title.index('(')
+            end = title.index(')')
+            cinema = title[start + 1:end]
+            start = title.index(']')
+            end = title.index('元')
+            price = int(title[start + 1:end])
+            return True, cinema, price
+        else:
+            return False, '', 0

@@ -23,7 +23,7 @@ python3 run.py -u USERNAME -p PASSWORD
 
 ## Changelog
 
-- 2021/01/17, Version 3.1 with simplified codes
+- 2021/01/18, Version 4.0, new project structure
 - 2020/08/31, Bug fix
 - 2020/08/24, Adapt to new site
 - 2020/08/21, Add documents
