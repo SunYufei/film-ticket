@@ -3,8 +3,8 @@ on:
   push:
     branches:
       - master
-#  schedule:
-#    - cron: '0 0-6,15-23 * * *'
+  schedule:
+    - cron: '0 0-6,15-23 * * *'
 
 jobs:
   autorun:
