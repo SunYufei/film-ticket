@@ -1,0 +1,19 @@
+name: report
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  report:
+    name: report
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Clone codes
+        env:
+          REPO: ${{ secrets.CODING_REPO_PREFIX }}/auto-report/report.git
+        run: git clone $REPO
+      - name: Run codes
+        run: |
+          cd report
+          cat report.py
