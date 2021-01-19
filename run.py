@@ -31,27 +31,18 @@ while do and utc_now() - start_time < timedelta(minutes=max_run_time):
     now = utc_now()
     log('当前时间', now.date())
 
-    act_date, links = tools.rest_tickets()
+    act_date = tools.update_links()
     log('最新活动', act_date)
 
-    orders = my_orders(act_date)
-    print_orders(orders)
+    tools.update_orders(act_date)
+    tools.show_orders()
 
     if now.hour >= 23:
         # delete all tickets at every 11pm
         tools.remove_all()
-        break
+        do = False
     else:
-        count = 0
-        for cinema in links:
-            for price in links[cinema]:
-                link = links[cinema][price]
-                if len(orders[cinema][price] != 2):
-                    need_purchase = tools.purchase(link)
-                    log('抢票', f'{cinema} {price} {"抢票结束" if not need_purchase else "仍需抢票"}')
-                    if not need_purchase:
-                        count += 1
-        if count >= tools.max_type_count():
-            break
+        do = tools.purchase_all()
+        log('抢票', '仍需抢票' if do else '抢票结束')
 
     sleep(10)

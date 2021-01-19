@@ -11,10 +11,10 @@ from utils import log
 
 @dataclass
 class TicketInfo:
-    price: int
     link: str = ''
-    rest: bool = True
-    tid: List[str] = field(default=[])
+    can_purchase: bool = False
+    ticket_ids: List[str] = field(default_factory=list)
+    ticket_count: int = 0
     need_purchase: bool = True
 
 
@@ -29,9 +29,9 @@ class TicketTools:
         self._purchase = f'{self._base}/getticket'
 
         # my orders
-        self.my_orders = {
-            '利群华艺国际影院金鼎广场店': (TicketInfo(price=8),),
-            '中影国际影城大拇指广场店': (TicketInfo(price=8),)
+        self._my_orders = {
+            '利群华艺国际影院金鼎广场店': {8: TicketInfo()},
+            '中影国际影城大拇指广场店': {8: TicketInfo()}
         }
 
         # username, password
@@ -55,10 +55,7 @@ class TicketTools:
             log('登录', e)
             return False
 
-    def rest_tickets(self) -> date:
-        """
-        update rest tickets
-        """
+    def update_links(self) -> date:
         act_date = date(2020, 1, 1)
         try:
             page, do = 1, True
@@ -74,11 +71,9 @@ class TicketTools:
                         act = datetime.strptime(act, '%Y-%m-%d').date()
                         if act - act_date >= timedelta(0):
                             act_date = act
-                            for info in self.my_orders[cinema]:
-                                if info.price == price:
-                                    info.link = item.xpath('.//a[@class="jianzheng_remai_case_title"]/@href')[0]
-                                    info.rest = len(item.xpath('.//i')) != 0
-                                    break
+                            info = self._my_orders[cinema][price]
+                            info.link = item.xpath('.//a[@class="jianzheng_remai_case_title"]/@href')[0]
+                            info.can_purchase = len(item.xpath('.//i')) != 0
                         else:
                             # wrong activity time, break
                             do = False
@@ -93,9 +88,11 @@ class TicketTools:
         :param act_date: activity date
         """
         # clear old data
-        for cinema in self.my_orders:
-            for info in self.my_orders[cinema]:
-                info.tid.clear()
+        for cinema in self._my_orders:
+            for price in self._my_orders[cinema]:
+                info = self._my_orders[cinema][price]
+                info.ticket_ids.clear()
+                info.ticket_count = 0
                 info.need_purchase = True
 
         # update new data
@@ -115,13 +112,12 @@ class TicketTools:
                         # check activity time
                         if time - act_date == timedelta(0):
                             button = item.xpath('.//input')
+                            info = self._my_orders[cinema][price]
+                            info.ticket_count += 1
+                            if info.ticket_count >= 2:
+                                info.need_purchase = False
                             if len(button) == 1:
-                                for info in self.my_orders[cinema]:
-                                    if info.price == price:
-                                        info.tid.append(button[-1].xpath('@onclick')[0][5:-2])
-                                        if len(info.tid) == 2:
-                                            info.need_purchase = False
-                                        break
+                                info.ticket_ids.append(button[-1].xpath('@onclick')[0][5:-2])
                         else:
                             # wrong activity time, break
                             do = False
@@ -130,12 +126,19 @@ class TicketTools:
         except Exception as e:
             log('我的订单', e)
 
-    def purchase(self, url: str) -> bool:
-        """
-        purchase, need login
-        :param url: purchase url
-        :return: need purchase
-        """
+    def purchase_all(self) -> bool:
+        ret = False
+        for cinema in self._my_orders:
+            for price in self._my_orders[cinema]:
+                info = self._my_orders[cinema][price]
+                while info.need_purchase and info.can_purchase:
+                    if self._purchase_one(info.link):
+                        info.ticket_count += 1
+                        info.need_purchase = info.ticket_count >= 2
+                ret = ret or info.need_purchase
+        return ret
+
+    def _purchase_one(self, url: str) -> bool:
         data = {
             'activityid': '',
             'activityname': '',
@@ -152,15 +155,14 @@ class TicketTools:
                 if name in data:
                     data[name] = item.xpath('@value')[0]
             r = self._session.post(self._purchase, data)
-            return r.json()['message'] != '每人只能抢2票'
+            msg = r.json()['message']
+            log('抢票', msg)
+            return '抢票成功' in msg
         except Exception as e:
             log('抢票', e)
-            return True
+            return False
 
     def remove_all(self) -> None:
-        """
-        remove all tickets
-        """
         msg = {
             '1': '活动已过期',
             '2': '删除失败',
@@ -168,34 +170,28 @@ class TicketTools:
             '200': '服务器错误'
         }
         try:
-            for cinema in self.my_orders:
-                for info in self.my_orders[cinema]:
-                    for tid in info.tid:
+            for cinema in self._my_orders:
+                for price in self._my_orders[cinema]:
+                    for tid in self._my_orders[cinema][price].ticket_ids:
                         r = self._session.post(self._remove, data={'QzId': tid})
                         code = r.text[1:-1]
-                        log('删除', f'{cinema} {info.price} {msg[code] if code in msg else code}')
+                        log('删除', f'{cinema} {price} {msg[code] if code in msg else code}')
         except Exception as e:
             log('删除', e)
 
-    def max_type_count(self) -> int:
-        count = 0
-        for cinema in self.my_orders:
-            count += len(self.my_orders[cinema])
-        return count
-
     def show_orders(self) -> None:
         print(f'{"[我的订单]":24s}\t|', end='')
-        for cinema in self.my_orders:
-            for info in self.my_orders[cinema]:
-                print(f'{info.price:3d} ', end='|')
+        for cinema in self._my_orders:
+            for price in self._my_orders[cinema]:
+                print(f'{price:3d} ', end='|')
             break
         print()
 
-        for cinema in self.my_orders:
+        for cinema in self._my_orders:
             print(cinema)
             print(f'{" ":24s}\t|', end='')
-            for info in self.my_orders[cinema]:
-                print(f'{len(info.tid):3d} ', end='|')
+            for price in self._my_orders[cinema]:
+                print(f'{len(self._my_orders[cinema][price].ticket_ids):3d} ', end='|')
             print()
 
     @staticmethod
