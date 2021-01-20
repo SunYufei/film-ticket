@@ -134,7 +134,7 @@ class TicketTools:
                 while info.need_purchase and info.can_purchase:
                     if self._purchase_one(info.link):
                         info.ticket_count += 1
-                        info.need_purchase = info.ticket_count >= 2
+                    info.need_purchase = info.ticket_count < 2
                 ret = ret or info.need_purchase
         return ret
 
@@ -157,7 +157,7 @@ class TicketTools:
             r = self._session.post(self._purchase, data)
             msg = r.json()['message']
             log('抢票', msg)
-            return ('抢票成功' in msg) or (msg == '每人只能抢2票')
+            return '抢票成功' in msg or '只能' in msg
         except Exception as e:
             log('抢票', e)
             return False
@@ -180,19 +180,17 @@ class TicketTools:
             log('删除', e)
 
     def show_orders(self) -> None:
-        print(f'{"[我的订单]":24s}\t|', end='')
+        header = [' ' * 14, '票价', '已抢', '需抢', '可抢']
+        log('我的订单', '|'.join(header))
         for cinema in self._my_orders:
+            content = [cinema + ' ' * (28 - len(cinema) * 2)]
             for price in self._my_orders[cinema]:
-                print(f'{price:3d} ', end='|')
-            break
-        print()
-
-        for cinema in self._my_orders:
-            print(cinema)
-            print(f'{" ":24s}\t|', end='')
-            for price in self._my_orders[cinema]:
-                print(f'{len(self._my_orders[cinema][price].ticket_ids):3d} ', end='|')
-            print()
+                content.append(f'{price:3d} ')
+                info = self._my_orders[cinema][price]
+                content.append(f'{len(info.ticket_ids):3d} ')
+                content.append(f' {"√" if info.need_purchase else "×"} ')
+                content.append(f' {"√" if info.can_purchase else "×"} ')
+                print('|'.join(content))
 
     @staticmethod
     def _parse_title(title: str) -> Tuple[bool, str, int]:
