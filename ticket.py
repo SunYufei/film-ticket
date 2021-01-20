@@ -180,8 +180,8 @@ class TicketTools:
             log('删除', e)
 
     def show_orders(self) -> None:
-        header = [' ' * 14, '票价', '已抢', '需抢', '可抢']
-        log('我的订单', '|'.join(header))
+        log('我的订单', '')
+        print('|'.join([' ' * 28, '票价', '已抢', '需抢', '可抢']))
         for cinema in self._my_orders:
             content = [cinema + ' ' * (28 - len(cinema) * 2)]
             for price in self._my_orders[cinema]:
