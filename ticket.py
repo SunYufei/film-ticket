@@ -157,7 +157,7 @@ class TicketTools:
             r = self._session.post(self._purchase, data)
             msg = r.json()['message']
             log('抢票', msg)
-            return '抢票成功' in msg
+            return ('抢票成功' in msg) or (msg == '每人只能抢2票')
         except Exception as e:
             log('抢票', e)
             return False
