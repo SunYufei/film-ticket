@@ -181,7 +181,7 @@ class TicketTools:
 
     def show_orders(self) -> None:
         log('我的订单', '')
-        print('|'.join([' ' * 28, '票价', '已抢', '需抢', '可抢']))
+        print('|'.join([' ' * 26, '票价', '已抢', '需抢', '可抢']))
         for cinema in self._my_orders:
             content = [cinema + ' ' * (28 - len(cinema) * 2)]
             for price in self._my_orders[cinema]:
