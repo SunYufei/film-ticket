@@ -4,7 +4,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 0,1,2,3,4,5,6,15,16,17,18,19,20,21,22,23 * * *'
+    - cron: '0 0-6,15-23 * * *'
 
 jobs:
   autorun:
@@ -13,6 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install requirements
-        run: pip3 install requests lxml
+        run: pip3 install lxml
       - name: Run codes
         run: python3 run.py -u ${{ secrets.USERNAME }} -p ${{ secrets.PASSWORD }}
