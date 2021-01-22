@@ -16,4 +16,4 @@ jobs:
       - name: Run codes
         run: |
           cd report
-          python3 report.py
+          python3 run.py

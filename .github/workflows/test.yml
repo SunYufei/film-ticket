@@ -1,11 +1,11 @@
-name: report
+name: test
 on:
   push:
     branches:
       - main
 
 jobs:
-  report:
+  test:
     name: report
     runs-on: ubuntu-20.04
     steps:
