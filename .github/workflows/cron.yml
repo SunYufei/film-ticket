@@ -1,10 +1,10 @@
 name: autorun
 on:
-#  push:
-#    branches:
-#      - master
-  schedule:
-    - cron: '0 * * * *'
+  push:
+    branches:
+      - some
+#  schedule:
+#    - cron: '0 0-6,15-23 * * *'
 
 jobs:
   autorun:
