@@ -8,6 +8,20 @@ from lxml import etree
 
 from utils import log
 
+# url
+BASE = 'http://city.qingdaonews.com/qingdao/laoshanculture'
+INDEX = f'{BASE}/index'
+LOGIN = f'{BASE}/loginsub'
+ORDER = f'{BASE}/myorder'
+REMOVE = f'{BASE}/delorder'
+PURCHASE = f'{BASE}/getticket'
+
+# pattern
+title_ptn = re.compile(r'<a href="(.*?)".*?>.*?(\d)元观影活动\((.*?)\)</a>')
+date_ptn = re.compile(r'\d{4}-\d{2}-\d{2}')
+no_ticket_ptn = re.compile(r'已抢光')
+order_ptn = re.compile(r'')
+
 
 @dataclass
 class TicketInfo:
@@ -20,14 +34,6 @@ class TicketInfo:
 
 class TicketTools:
     def __init__(self, username: str, password: str):
-        # urls
-        self._base = 'http://city.qingdaonews.com/qingdao/laoshanculture'
-        self._index = f'{self._base}/index'
-        self._login = f'{self._base}/loginsub'
-        self._order = f'{self._base}/myorder'
-        self._remove = f'{self._base}/delorder'
-        self._purchase = f'{self._base}/getticket'
-
         # my orders
         self._my_orders = {
             '利群华艺国际影院金鼎广场店': {8: TicketInfo()},
@@ -42,11 +48,8 @@ class TicketTools:
         self._session = requests.Session()
 
     def login(self) -> bool:
-        """
-        :return: login status
-        """
         try:
-            r = self._session.post(self._login, data={
+            r = self._session.post(LOGIN, data={
                 'IdNumber': self._username,
                 'PassWord': self._password
             })
@@ -56,37 +59,29 @@ class TicketTools:
             return False
 
     def update_links(self) -> date:
-        act_date = date(2020, 1, 1)
+        act_date = date(2021, 1, 1)
         try:
             page, do = 1, True
             while do:
-                r = requests.get(f'{self._index}/page/{page}')
-                html = etree.HTML(r.text)
-                for item in html.xpath('//div[@class="jianzheng_remai_case"]'):
-                    a = item.xpath('.//a[@class="jianzheng_remai_case_title"]')[0]
-                    is_film, cinema, price = self._parse_title(a.xpath('text()')[0])
-                    if is_film:
-                        r = requests.get(a.xpath('@href')[0])
-                        act = re.compile(r'\d{4}-\d{2}-\d{2}').search(r.text).group()
-                        act = datetime.strptime(act, '%Y-%m-%d').date()
-                        if act - act_date >= timedelta(0):
-                            act_date = act
-                            info = self._my_orders[cinema][price]
-                            info.link = item.xpath('.//a[@class="jianzheng_remai_case_title"]/@href')[0]
-                            info.can_purchase = len(item.xpath('.//i')) != 0
-                        else:
-                            # wrong activity time, break
-                            do = False
+                r = requests.get(f'{INDEX}/page/{page}')
+                for link, price, cinema in title_ptn.findall(r.text):
+                    r = requests.get(link)
+                    act = date_ptn.search(r.text).group()
+                    act = datetime.strptime(act, '%Y-%m-%d').date()
+                    if act - act_date >= timedelta(0):
+                        act_date = act
+                        info = self._my_orders[cinema][price]
+                        info.link = link
+                        info.can_purchase = len(no_ticket_ptn.findall(r.text)) == 0
+                    else:
+                        # wrong activity time, break
+                        do = False
                 # next page
                 page += 1
         finally:
             return act_date
 
     def update_orders(self, act_date: date) -> None:
-        """
-        get orders, need login
-        :param act_date: activity date
-        """
         # clear old data
         for cinema in self._my_orders:
             for price in self._my_orders[cinema]:
@@ -99,7 +94,7 @@ class TicketTools:
         try:
             page, do = 1, True
             while do:
-                r = self._session.get(f'{self._order}/page/{page}')
+                r = self._session.get(f'{ORDER}/page/{page}')
                 html = etree.HTML(r.text)
                 items = html.xpath('//div[@class="jianzheng_remai_case"]')
                 do = len(items) > 0
@@ -154,7 +149,7 @@ class TicketTools:
                 name = item.xpath('@name')[0]
                 if name in data:
                     data[name] = item.xpath('@value')[0]
-            r = self._session.post(self._purchase, data)
+            r = self._session.post(PURCHASE, data)
             msg = r.json()['message']
             log('抢票', msg)
             return '抢票成功' in msg or '只能' in msg
@@ -173,7 +168,7 @@ class TicketTools:
             for cinema in self._my_orders:
                 for price in self._my_orders[cinema]:
                     for tid in self._my_orders[cinema][price].ticket_ids:
-                        r = self._session.post(self._remove, data={'QzId': tid})
+                        r = self._session.post(REMOVE, data={'QzId': tid})
                         code = r.text[1:-1]
                         log('删除', f'{cinema} {price} {msg[code] if code in msg else code}')
         except Exception as e:

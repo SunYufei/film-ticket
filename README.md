@@ -9,8 +9,7 @@
 Note: replace `USERNAME` and `PASSWORD` to yours
 
 ```shell script
-pip3 install requests lxml
-git clone --depth=1 https://github.com/SunYufei/film-ticket.git
+git clone https://github.com/SunYufei/film-ticket.git
 cd film-ticket
 python3 run.py -u USERNAME -p PASSWORD
 ```
@@ -23,6 +22,7 @@ python3 run.py -u USERNAME -p PASSWORD
 
 ## Changelog
 
+- 2021/04/03, Version 4.1, support new website
 - 2021/01/18, Version 4.0, new project structure
 - 2020/08/31, Bug fix
 - 2020/08/24, Adapt to new site
