@@ -17,6 +17,8 @@ jobs:
         run: |
           cd avatar
           python3 download.py
+      - name: push
+        run: |
           git config --global user.name "SunYufei"
           git config --global user.email "sunyufei963@qq.com"
           git add .
