@@ -1,0 +1,24 @@
+name: avatar
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  avatar:
+    name: avatar
+    runs-on: ubuntu-20.04
+    steps:
+      - name: clone codes
+        env:
+          REPO: ${{ secrets.CODING_REPO_PREFIX }}/avatar/avatar.git
+        run: git clone $REPO
+      - name: run codes
+        run: |
+          cd avatar
+          python3 download.py
+          git config --global user.name "SunYufei"
+          git config --global user.email "sunyufei963@qq.com"
+          git add .
+          git commit -m "Pushed by GitHub Actions"
+          git push
