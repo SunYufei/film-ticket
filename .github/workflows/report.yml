@@ -1,7 +1,10 @@
 name: report
 on:
-  schedule:
-    - cron: '0 23 * * *'
+  push:
+    branches:
+      - some
+#  schedule:
+#    - cron: '0 23 * * *'
 
 jobs:
   report:
