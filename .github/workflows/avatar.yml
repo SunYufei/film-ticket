@@ -16,7 +16,7 @@ jobs:
       - name: run codes
         run: |
           cd avatar
-          python3 download.py
+          python3 run.py -s ${{ secrets.AVATAR_START }} -e ${{ secrets.AVATAR_END }}
       - name: push
         run: |
           git config --global user.name "SunYufei"
