@@ -16,10 +16,12 @@ jobs:
         run: |
           git clone $REPO_CODE
           git clone $REPO_IMG
+          cd code
+          cat run.py
       - name: run codes
         run: |
           cd code
-          python3 run.py -s ${{ secrets.AVATAR_START }} -e ${{ secrets.AVATAR_END }}
+          python3 run.py -s ${{ secrets.AVATAR_START }} -e ${{ secrets.AVATAR_END }} -c ${{ secrets.AVATAR_COUNT }}
       - name: push
         run: |
           git config --global user.name "SunYufei"
