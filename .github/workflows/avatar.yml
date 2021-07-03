@@ -1,8 +1,7 @@
 name: avatar
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '0 * * * *'
 
 jobs:
   avatar:
@@ -21,7 +20,7 @@ jobs:
       - name: run codes
         run: |
           cd code
-          python3 run.py -s ${{ secrets.AVATAR_START }} -e ${{ secrets.AVATAR_END }} -c ${{ secrets.AVATAR_COUNT }}
+          python3 run.py
       - name: push
         run: |
           git config --global user.name "SunYufei"
